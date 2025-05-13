@@ -112,11 +112,25 @@ if uploaded_file is not None:
     
 
     # Save and export
-    output = io.BytesIO()
-    df.to_excel(output, index=False)
+#     output = io.BytesIO()
+#     df.to_excel(output, index=False)
+# 
+#     st.success("File cleaned and enriched successfully!")
+#     st.download_button("Download Cleaned File", data=output.getvalue(), file_name="Cleaned_Assembly_Sheet_Final.xlsx")
 
-    st.success("File cleaned and enriched successfully!")
-    st.download_button("Download Cleaned File", data=output.getvalue(), file_name="Cleaned_Assembly_Sheet_Final.xlsx")
+    # Convert to Excel in memory
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    output.seek(0)
+
+    # Streamlit download button
+    st.download_button(
+        label="Download Cleaned Excel File",
+        data=output,
+        file_name="cleaned_data.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 
 
