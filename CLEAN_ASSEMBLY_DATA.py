@@ -119,7 +119,7 @@ if uploaded_file is not None:
 #     st.download_button("Download Cleaned File", data=output.getvalue(), file_name="Cleaned_Assembly_Sheet_Final.xlsx")
 
     # Convert to Excel in memory
-    output = BytesIO()
+    output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Sheet1')
     output.seek(0)
