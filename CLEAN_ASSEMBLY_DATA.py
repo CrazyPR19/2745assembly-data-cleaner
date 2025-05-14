@@ -125,13 +125,16 @@ if uploaded_file is not None:
         weight_col_index = df.columns.get_loc('WEIGHT (KG)') + 1
         df.insert(weight_col_index, 'Total Weight (KG)', df.apply(get_total_weight, axis=1))
 
-    # Create Assembly Master sheet
-    assembly_master = df[df['PART MARK'].isna()][['NMDC DWG NO', 'ASSEMBLY MARK', 'ASSEMBLY DESC', 'Assembly Qty']].drop_duplicates()
+    # Create Assembly Master sheet ONLY from distinct headers
+    assembly_master = df[df['STRUCTURE NAME'].isna() | (df['STRUCTURE NAME'].astype(str).str.strip() == '')][['NMDC DWG NO', 'ASSEMBLY MARK', 'ASSEMBLY DESC']].drop_duplicates()
+    assembly_master['Assembly Qty'] = assembly_master.apply(
+        lambda row: parent_qty_map.get((row['NMDC DWG NO'], row['ASSEMBLY MARK']), 1.0), axis=1
+    )
     assembly_master['Ass_Location'] = 'YC'
     assembly_master['YIC_Code'] = 'FR'
 
     # Create Assembly Control Sheet
-    control_sheet = df[df['PART MARK'].notna()].copy()
+    control_sheet = df[(df['PART MARK'].notna()) & (df['STRUCTURE NAME'].notna()) & (df['STRUCTURE NAME'].astype(str).str.strip() != '')].copy()
     control_sheet['PROJECTID'] = 2745
     control_sheet['STRUCTURE_NO'] = control_sheet['STRUCTURE NAME']
     control_sheet['Length_mm'] = ''
@@ -149,7 +152,7 @@ if uploaded_file is not None:
     # Save to Excel in memory
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Sheet1')
+        df.to_excel(writer, index=False, sheet_name='MainSheet')
         assembly_master.to_excel(writer, index=False, sheet_name='AssemblyMaster')
         assembly_control.to_excel(writer, index=False, sheet_name='AssemblyControlSheet')
     output.seek(0)
@@ -157,10 +160,10 @@ if uploaded_file is not None:
     # Dynamic filename
     original_name = os.path.splitext(uploaded_file.name)[0]
     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    new_filename = f"{original_name}_converted_{timestamp}.xlsx"
+    new_filename = f"{original_name}_AssemblySheets_{timestamp}.xlsx"
 
     st.download_button(
-        label="Download Cleaned Excel File",
+        label="Download Assembly Master & Control Sheets",
         data=output,
         file_name=new_filename,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
